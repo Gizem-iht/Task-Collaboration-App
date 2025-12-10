@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: myproject-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5555:5432"
+    networks:
+      - mynet
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: myproject-backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+    environment:
+      - DB_NAME=mydb
+      - DB_USER=myuser
+      - DB_PASSWORD=mypassword
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"   # 🔹 axios baseURL = http://localhost:8000 için
+    networks:
+      - mynet
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: myproject-frontend
+    command: npm run serve -- --host 0.0.0.0 --port 8080
+    # İlk etapta volume kapalı olsun, build düzgün çalışsın.
+    # Gerekirse sonra açarız:
+    # volumes:
+    #   - ./frontend:/app
+    #   - /app/node_modules
+    ports:
+      - "8080:8080"
+    networks:
+      - mynet
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: myproject-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - mynet
+
+networks:
+  mynet:
+
+volumes:
+  postgres_data:
