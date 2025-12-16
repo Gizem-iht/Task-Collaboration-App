@@ -1,0 +1,7 @@
+[] serializer.py oluşturulacak. içerisine her model için bir serializer yazılacak. 
+[] wrapper'lar incelenecek. is_auth ve is_staff gibi if kontrolleri wrapper içine alınacak
+[] views.py içindeki uçlar ModelViewSet'e çevirilecek. her bir uç tek bir işlem yapacak. if ile GET,POST,DELETE kontrolleri kalkacak
+
+[] QuerySet'leri for loop ile döndürmüyoruz. Serializer'dan geçirip direkt response dönebiliriz.
+[] tekrar eden kodlar, fonksiyon haline gelecek ve kod tekrarından kaçınılacak
+[] password kontrol mekanizması eklenecek. register yapılırken kullanıcının girdiği parola kontrol edilecek, standard dışı parolalar uyarı verecek. settings.py içinde standart'lar bulunuyor.
