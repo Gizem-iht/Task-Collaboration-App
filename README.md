@@ -1,6 +1,8 @@
-- [ ] serializer.py oluşturulacak. içerisine her model için bir serializer yazılacak.(YAPILDI)
-- [ ] wrapper'lar incelenecek. is_auth ve is_staff gibi if kontrolleri wrapper içine alınacak(YAPILDI)
-- [ ] views.py içindeki uçlar ModelViewSet'e çevirilecek. her bir uç tek bir işlem yapacak. if ile GET,POST,DELETE kontrolleri kalkacak(YAPILDI)
-- [ ] QuerySet'leri for loop ile döndürmüyoruz. Serializer'dan geçirip direkt response dönebiliriz.
-- [ ] tekrar eden kodlar, fonksiyon haline gelecek ve kod tekrarından kaçınılacak
-- [ ] password kontrol mekanizması eklenecek. register yapılırken kullanıcının girdiği parola kontrol edilecek, standard dışı parolalar uyarı verecek. settings.py içinde standart'lar bulunuyor.
+- [X] serializer.py oluşturulacak. içerisine her model için bir serializer yazılacak.(YAPILDI)
+- [X] wrapper'lar incelenecek. is_auth ve is_staff gibi if kontrolleri wrapper içine alınacak(YAPILDI)
+- [X] views.py içindeki uçlar ModelViewSet'e çevirilecek. her bir uç tek bir işlem yapacak. if ile GET,POST,DELETE kontrolleri kalkacak(YAPILDI)
+- [X] QuerySet'leri for loop ile döndürmüyoruz. Serializer'dan geçirip direkt response dönebiliriz.
+- [X] tekrar eden kodlar, fonksiyon haline gelecek ve kod tekrarından kaçınılacak
+- [X] password kontrol mekanizması eklenecek. register yapılırken kullanıcının girdiği parola kontrol edilecek, standard dışı parolalar uyarı verecek. settings.py içinde standart'lar bulunuyor.
+- [ ] FE ve BE içerisinde bir tane ENCRYPTION_KEY koyulacak. "me" ucundan gönderilen veri bu key ile şifrelenecek, FE tarafında "me" ucundan gelen şifreli veri host tarafında çözülecek ve içerisindeki bilgiler kullanılacak.
+- [ ] localstorage yerien daha güvenli bir yöntem kullanılacak. 
