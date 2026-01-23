@@ -4,5 +4,5 @@
 - [X] QuerySet'leri for loop ile döndürmüyoruz. Serializer'dan geçirip direkt response dönebiliriz.
 - [X] tekrar eden kodlar, fonksiyon haline gelecek ve kod tekrarından kaçınılacak
 - [X] password kontrol mekanizması eklenecek. register yapılırken kullanıcının girdiği parola kontrol edilecek, standard dışı parolalar uyarı verecek. settings.py içinde standart'lar bulunuyor.
-- [ ] FE ve BE içerisinde bir tane ENCRYPTION_KEY koyulacak. "me" ucundan gönderilen veri bu key ile şifrelenecek, FE tarafında "me" ucundan gelen şifreli veri host tarafında çözülecek ve içerisindeki bilgiler kullanılacak.
-- [ ] localstorage yerien daha güvenli bir yöntem kullanılacak. 
+- [X] FE ve BE içerisinde bir tane ENCRYPTION_KEY koyulacak. "me" ucundan gönderilen veri bu key ile şifrelenecek, FE tarafında "me" ucundan gelen şifreli veri host tarafında çözülecek ve içerisindeki bilgiler kullanılacak.
+- [X] localstorage yerien daha güvenli bir yöntem kullanılacak. 
