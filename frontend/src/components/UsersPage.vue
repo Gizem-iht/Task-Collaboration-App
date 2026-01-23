@@ -140,6 +140,48 @@
 <script>
 import axios from "axios";
 
+
+function b64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+async function importAesKeyFromBase64(base64Key32bytes) {
+  const raw = b64ToBytes(base64Key32bytes);
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+}
+async function decryptMePayload(payload, base64Key) {
+  const key = await importAesKeyFromBase64(base64Key);
+  const iv = b64ToBytes(payload.iv);
+  const data = b64ToBytes(payload.data);
+
+  const plainBuf = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    data
+  );
+
+  const plainText = new TextDecoder().decode(new Uint8Array(plainBuf));
+  return JSON.parse(plainText);
+}
+
+function extractErrorMessage(err, fallback) {
+  const data = err?.response?.data;
+  if (!data) return fallback;
+  if (typeof data === "string") return data;
+  if (data.error) return data.error;
+  if (data.detail) return data.detail;
+
+  const keys = Object.keys(data);
+  if (keys.length > 0) {
+    const v = data[keys[0]];
+    if (Array.isArray(v) && v.length > 0) return v[0];
+    if (typeof v === "string") return v;
+  }
+  return fallback;
+}
+
 export default {
   name: "UsersPage",
 
@@ -178,8 +220,26 @@ export default {
 
   async created() {
     try {
-      const res = await axios.get("/me/"); 
-      this.isStaff = !!res.data.is_staff;
+      axios.defaults.withCredentials = true;
+
+      const res = await axios.get("/me/");
+
+      if (!res.data?.encrypted || !res.data?.payload) {
+        this.isStaff = false;
+        this.$router.replace("/login");
+        return;
+      }
+
+      const key = process.env.VUE_APP_ENCRYPTION_KEY_B64;
+      if (!key) {
+        this.isStaff = false;
+        this.$router.replace("/login");
+        return;
+      }
+
+      const me = await decryptMePayload(res.data.payload, key);
+
+      this.isStaff = !!(me?.is_staff || me?.is_superuser);
 
       if (!this.isStaff) {
         this.$router.replace("/home");
@@ -200,12 +260,12 @@ export default {
       this.error = null;
 
       try {
-        const res = await axios.get("/users/", { 
+        const res = await axios.get("/users/", {
           params: { q: this.searchTerm || "" },
         });
-        this.users = res.data;
+        this.users = res.data || [];
       } catch (err) {
-        this.error = err.response?.data?.error || "Failed to load users";
+        this.error = extractErrorMessage(err, "Failed to load users");
       } finally {
         this.loading = false;
       }
@@ -233,11 +293,11 @@ export default {
 
       this.addError = null;
       try {
-        await axios.post("/users/", this.newUser); 
+        await axios.post("/users/", this.newUser);
         this.showAddDialog = false;
         await this.fetchUsers();
       } catch (err) {
-        this.addError = err.response?.data?.error || "Failed to create user";
+        this.addError = extractErrorMessage(err, "Failed to create user");
       }
     },
 
@@ -256,12 +316,12 @@ export default {
       if (!this.isStaff || !this.userToDelete) return;
 
       try {
-        await axios.delete(`/users/${this.userToDelete.id}/`); 
+        await axios.delete(`/users/${this.userToDelete.id}/`);
         this.showDeleteDialog = false;
         this.userToDelete = null;
         await this.fetchUsers();
       } catch (err) {
-        alert(err.response?.data?.error || "Failed to delete user");
+        alert(extractErrorMessage(err, "Failed to delete user"));
       }
     },
   },

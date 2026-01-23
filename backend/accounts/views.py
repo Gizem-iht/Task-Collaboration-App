@@ -19,6 +19,8 @@ from .serializers import (
 )
 from .permissions import IsStaff, IsStaffOrOwner
 
+from .crypto_utils import encrypt_json
+
 
 class AuthViewSet(viewsets.ViewSet):
     """
@@ -50,7 +52,6 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path="login")
     def login(self, request):
-    
         username = (request.data.get("username") or "").strip()
         password = request.data.get("password") or ""
 
@@ -96,18 +97,19 @@ class AuthViewSet(viewsets.ViewSet):
     )
     def me(self, request):
         u = request.user
-        return Response(
-            {
-                "isAuthenticated": True,
-                "id": u.id,
-                "username": u.username,
-                "email": u.email,
-                "first_name": u.first_name,
-                "last_name": u.last_name,
-                "is_staff": u.is_staff,
-                "is_superuser": u.is_superuser,
-            }
-        )
+
+        plain = {
+            "isAuthenticated": True,
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "first_name": u.first_name,
+            "last_name": u.last_name,
+            "is_staff": u.is_staff,
+            "is_superuser": u.is_superuser,
+        }
+
+        return Response(encrypt_json(plain))
 
     @action(
         detail=False,
@@ -170,7 +172,6 @@ class AuthViewSet(viewsets.ViewSet):
         return Response({"success": True})
 
 
-
 class UserViewSet(viewsets.ModelViewSet):
     """
     GET    /api/users/?q=...
@@ -203,10 +204,6 @@ class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
 
     def get_permissions(self):
-        """
-        Object-level permission (IsStaffOrOwner) update/delete için gerekli.
-        Create/list için IsAuthenticated yeterli.
-        """
         if self.action in ["update", "partial_update", "destroy", "retrieve"]:
             permission_classes = [IsAuthenticated, IsStaffOrOwner]
         else:
@@ -223,7 +220,6 @@ class TaskViewSet(viewsets.ModelViewSet):
         return qs.filter(owner=self.request.user)
 
     def perform_create(self, serializer):
-    
         owner = serializer.validated_data.get("owner", None)
         if self.request.user.is_staff and owner is not None:
             serializer.save(owner=owner)

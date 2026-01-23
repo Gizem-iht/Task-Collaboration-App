@@ -38,6 +38,42 @@
 <script>
 import axios from "axios";
 
+function extractErrorMessage(err) {
+ 
+
+  const data = err?.response?.data;
+
+  if (!data) return "Registration failed.";
+
+  if (typeof data === "string") return data;
+
+  if (data.error) return data.error;
+  if (data.detail) return data.detail;
+
+
+  if (data.password && Array.isArray(data.password) && data.password.length > 0) {
+    return data.password[0];
+  }
+  if (data.username && Array.isArray(data.username) && data.username.length > 0) {
+    return data.username[0];
+  }
+  if (data.email && Array.isArray(data.email) && data.email.length > 0) {
+    return data.email[0];
+  }
+  if (data.non_field_errors && Array.isArray(data.non_field_errors) && data.non_field_errors.length > 0) {
+    return data.non_field_errors[0];
+  }
+
+  const keys = Object.keys(data);
+  if (keys.length > 0) {
+    const firstVal = data[keys[0]];
+    if (Array.isArray(firstVal) && firstVal.length > 0) return firstVal[0];
+    if (typeof firstVal === "string") return firstVal;
+  }
+
+  return "Registration failed.";
+}
+
 export default {
   name: "RegisterPage",
 
@@ -57,23 +93,27 @@ export default {
       this.success = false;
 
       try {
-        const res = await axios.post("/register/", {   
+        
+        axios.defaults.withCredentials = true;
+
+        const res = await axios.post("/register/", {
           username: this.username,
           email: this.email,
           password: this.password,
         });
 
-        if (res.data.success) {
+        if (res.data?.success) {
           this.success = true;
 
           setTimeout(() => {
             this.$router.push("/users");
           }, 1200);
         } else {
-          this.error = res.data.error || "Registration failed.";
+          this.error = res.data?.error || "Registration failed.";
         }
       } catch (err) {
-        this.error = err.response?.data?.error || "Registration failed.";
+        console.log("REGISTER ERROR", err);
+        this.error = extractErrorMessage(err);
       }
     },
   },

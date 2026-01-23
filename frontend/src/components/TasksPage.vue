@@ -106,24 +106,14 @@
               </td>
 
               <td class="text-center">
-                <v-btn
-                  small
-                  text
-                  color="red darken-1"
-                  @click="deleteTask(task)"
-                >
+                <v-btn small text color="red darken-1" @click="deleteTask(task)">
                   <v-icon left small>mdi-delete</v-icon>
                   Delete
                 </v-btn>
               </td>
 
               <td class="text-center">
-                <v-btn
-                  small
-                  text
-                  color="primary"
-                  @click="openComments(task)"
-                >
+                <v-btn small text color="primary" @click="openComments(task)">
                   <v-icon left small>mdi-comment-text-outline</v-icon>
                   Comments
                 </v-btn>
@@ -156,10 +146,7 @@
               Loading comments...
             </div>
 
-            <div
-              v-else-if="comments.length === 0"
-              class="grey--text text-center mb-2"
-            >
+            <div v-else-if="comments.length === 0" class="grey--text text-center mb-2">
               No comments yet. Be the first to write ✍️
             </div>
 
@@ -256,6 +243,32 @@
 <script>
 import axios from "axios";
 
+
+function b64ToBytes(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+async function importAesKeyFromBase64(base64Key32bytes) {
+  const raw = b64ToBytes(base64Key32bytes);
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+}
+async function decryptMePayload(payload, base64Key) {
+  const key = await importAesKeyFromBase64(base64Key);
+  const iv = b64ToBytes(payload.iv);
+  const data = b64ToBytes(payload.data);
+
+  const plainBuf = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv },
+    key,
+    data
+  );
+
+  const plainText = new TextDecoder().decode(new Uint8Array(plainBuf));
+  return JSON.parse(plainText);
+}
+
 export default {
   name: "TasksPage",
   data() {
@@ -285,15 +298,21 @@ export default {
       comments: [],
       commentsLoading: false,
       newComment: "",
+
+    
+      me: {
+        username: "",
+        isAdmin: false,
+      },
     };
   },
   computed: {
-    isAdmin() {
-      return localStorage.getItem("isAdmin") === "true";
-    },
 
+    isAdmin() {
+      return this.me.isAdmin === true;
+    },
     currentUsername() {
-      return localStorage.getItem("username") || "";
+      return this.me.username || "";
     },
 
     filteredTasks() {
@@ -321,18 +340,52 @@ export default {
       }));
     },
   },
-  created() {
-    this.loadTasks();
+
+  async created() {
+
+    axios.defaults.withCredentials = true;
+
+ 
+    await this.loadMe();
+
+    await this.loadTasks();
+
     if (this.isAdmin) {
-      this.loadUsers();
+      await this.loadUsers();
     }
   },
+
   methods: {
+    async loadMe() {
+      try {
+        const res = await axios.get("/me/");
+
+        if (!res.data?.encrypted || !res.data?.payload) {
+          console.error("Expected encrypted /me response, got:", res.data);
+          return;
+        }
+
+        const key = process.env.VUE_APP_ENCRYPTION_KEY_B64;
+        if (!key) {
+          console.error("Missing VUE_APP_ENCRYPTION_KEY_B64 in .env");
+          return;
+        }
+
+        const mePlain = await decryptMePayload(res.data.payload, key);
+
+        this.me.username = mePlain?.username || "";
+        this.me.isAdmin =
+          mePlain?.is_staff === true || mePlain?.is_superuser === true;
+      } catch (err) {
+        console.error("LOAD ME ERROR", err);
+    
+      }
+    },
+
     async loadTasks() {
       this.loading = true;
       this.error = null;
       try {
-     
         const res = await axios.get("/tasks/?all=1");
         this.tasks = res.data || [];
       } catch (err) {
@@ -392,6 +445,7 @@ export default {
           return "grey lighten-2";
       }
     },
+
     async changeState(task, newState) {
       if (task.state === newState) {
         this.stateMenu = { ...this.stateMenu, [task.id]: false };
@@ -425,7 +479,7 @@ export default {
       } catch (err) {
         console.error("UPDATE TASK ERROR", err);
         this.error =
-          (err.response && err.response.data && err.response.data.error) ||
+          err.response?.data?.error ||
           "Task could not be updated.";
         throw err;
       }
@@ -444,7 +498,7 @@ export default {
       } catch (err) {
         console.error("DELETE TASK ERROR", err);
         this.error =
-          (err.response && err.response.data && err.response.data.error) ||
+          err.response?.data?.error ||
           "Task could not be deleted.";
       }
     },
@@ -471,7 +525,7 @@ export default {
       } catch (err) {
         console.error("LOAD COMMENTS ERROR", err);
         this.error =
-          (err.response && err.response.data && err.response.data.error) ||
+          err.response?.data?.error ||
           "Comments could not be loaded.";
       } finally {
         this.commentsLoading = false;
@@ -494,7 +548,7 @@ export default {
       } catch (err) {
         console.error("SEND COMMENT ERROR", err);
         this.error =
-          (err.response && err.response.data && err.response.data.error) ||
+          err.response?.data?.error ||
           "Comment could not be sent.";
       }
     },
@@ -515,6 +569,7 @@ export default {
     closeAddDialog() {
       this.addDialog = false;
     },
+
     async createTask() {
       const title = (this.newTaskTitle || "").trim();
       if (!title) {
@@ -544,7 +599,7 @@ export default {
       } catch (err) {
         console.error("CREATE TASK ERROR", err);
         this.error =
-          (err.response && err.response.data && err.response.data.error) ||
+          err.response?.data?.error ||
           "Task could not be created.";
       }
     },
